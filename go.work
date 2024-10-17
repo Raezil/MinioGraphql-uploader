@@ -1,0 +1,11 @@
+go 1.22.8
+
+use (
+	.
+	./backend
+	./backend/graph
+	./backend/graph/model
+	./prisma
+	./prisma/db
+	./backend/jwt
+)

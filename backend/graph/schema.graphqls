@@ -1,0 +1,14 @@
+# schema.graphql
+type User {
+  id: Int!
+  email: String!
+}
+
+type Query {
+  me: User!
+}
+
+type Mutation {
+  signup(email: String!, password: String!): String! # returns JWT
+  login(email: String!, password: String!): String!  # returns JWT
+}
