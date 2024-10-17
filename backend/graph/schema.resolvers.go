@@ -9,7 +9,12 @@ import (
 	prisma "db"
 	"fmt"
 	. "jwt"
+	"log"
 	"model"
+	"path/filepath"
+
+	"github.com/99designs/gqlgen/graphql"
+	"github.com/minio/minio-go/v7"
 )
 
 // Signup is the resolver for the signup field.
@@ -52,6 +57,25 @@ func (r *mutationResolver) Login(ctx context.Context, email string, password str
 	}
 
 	return token, nil
+}
+
+func (r *Resolver) SingleUpload(ctx context.Context, file graphql.Upload) (bool, error) {
+	bucketName := "uploads"
+
+	// Create a unique file name by appending a timestamp or other identifier
+	objectName := filepath.Base(file.Filename)
+
+	// Upload the file to MinIO
+	_, err := r.MinioClient.PutObject(ctx, bucketName, objectName, file.File, file.Size, minio.PutObjectOptions{
+		ContentType: file.ContentType,
+	})
+	if err != nil {
+		log.Printf("Failed to upload file: %v", err)
+		return false, fmt.Errorf("failed to upload file: %v", err)
+	}
+
+	log.Printf("File uploaded successfully: %s", objectName)
+	return true, nil
 }
 
 // Me is the resolver for the me field.

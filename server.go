@@ -4,12 +4,16 @@ import (
 	"jwt"
 	"log"
 	"net/http"
+	"strings"
 
 	prisma "db"
 	"graph"
 
+	. "minio"
+
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
+	"github.com/gin-gonic/gin"
 )
 
 const defaultPort = "8080"
@@ -22,15 +26,31 @@ func main() {
 	}
 	defer client.Prisma.Disconnect()
 
-	// Initialize GraphQL server
+	minioClient, err := InitMinIO()
+	if err != nil {
+		log.Fatalf("Error initializing MinIO: %v", err)
+	}
+
 	srv := handler.NewDefaultServer(graph.NewExecutableSchema(graph.Config{Resolvers: &graph.Resolver{
-		Client: client,
+		Client:      client,
+		MinioClient: minioClient,
 	}}))
 
-	// Create HTTP server with JWT middleware
-	http.Handle("/", playground.Handler("GraphQL playground", "/query"))
-	http.Handle("/query", jwt.AuthMiddleware(srv))
+	r := gin.Default()
 
-	log.Printf("connect to http://localhost:8080/ for GraphQL playground")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	r.GET("/", func(c *gin.Context) {
+		playground.Handler("GraphQL playground", "/query").ServeHTTP(c.Writer, c.Request)
+	})
+
+	r.POST("/query", func(c *gin.Context) {
+		if strings.Contains(c.GetHeader("Content-Type"), "multipart/form-data") {
+			c.Request.ParseMultipartForm(32 << 20)
+		}
+
+		h := jwt.AuthMiddleware(srv)
+		h.ServeHTTP(c.Writer, c.Request)
+	})
+
+	log.Printf("Connect to http://localhost:%s/ for GraphQL playground", defaultPort)
+	log.Fatal(http.ListenAndServe(":"+defaultPort, r))
 }

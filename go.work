@@ -5,6 +5,7 @@ use (
 	./backend
 	./backend/graph
 	./backend/graph/model
+	./backend/minio
 	./prisma
 	./prisma/db
 	./backend/jwt
