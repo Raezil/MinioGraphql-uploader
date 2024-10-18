@@ -7,8 +7,10 @@ type User {
 type Query {
   me: User!
 }
+scalar Upload
 
 type Mutation {
+  uploadFile(file: Upload!): Boolean!
   signup(email: String!, password: String!): String! # returns JWT
   login(email: String!, password: String!): String!  # returns JWT
 }
