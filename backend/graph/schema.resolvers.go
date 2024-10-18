@@ -9,11 +9,48 @@ import (
 	prisma "db"
 	"fmt"
 	. "jwt"
+	"log"
 	"model"
+	"time"
+
+	"github.com/99designs/gqlgen/graphql"
+	minio "github.com/minio/minio-go/v7"
 )
 
-// Signup is the resolver for the signup field.
-func (r *Resolver) Signup(ctx context.Context, email string, password string) (string, error) {
+const (
+	bucketName     = "videos"
+	minioEndpoint  = "localhost:9000"
+	minioAccessKey = "minioadmin"
+	minioSecretKey = "minioadmin"
+	useSSL         = false
+)
+
+func uploadToMinio(ctx context.Context, minioClient *minio.Client, file graphql.Upload) error {
+	fileReader := file.File
+
+	objectName := fmt.Sprintf("%d-%s", time.Now().Unix(), file.Filename)
+
+	_, err := minioClient.PutObject(ctx, bucketName, objectName, fileReader, file.Size, minio.PutObjectOptions{
+		ContentType: file.ContentType,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to upload file to MinIO: %w", err)
+	}
+	return nil
+}
+
+func (r *mutationResolver) UploadFile(ctx context.Context, file graphql.Upload) (bool, error) {
+
+	err := uploadToMinio(ctx, r.Resolver.MinioClient, file)
+	if err != nil {
+		log.Printf("Error uploading file: %v", err)
+		return false, err
+	}
+
+	return true, nil
+}
+
+func (r *mutationResolver) Signup(ctx context.Context, email string, password string) (string, error) {
 	hashedPassword, err := HashPassword(password)
 	if err != nil {
 		return "", fmt.Errorf("failed to hash password: %v", err)
@@ -79,18 +116,3 @@ func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
-
-// !!! WARNING !!!
-// The code below was going to be deleted when updating resolvers. It has been copied here so you have
-// one last chance to move it out of harms way if you want. There are two reasons this happens:
-//  - When renaming or deleting a resolver the old code will be put in here. You can safely delete
-//    it when you're done.
-//  - You have helper methods in this file. Move them out to keep these resolver files clean.
-/*
-	func (r *mutationResolver) CreateTodo(ctx context.Context, input model.NewTodo) (*model.Todo, error) {
-	panic(fmt.Errorf("not implemented: CreateTodo - createTodo"))
-}
-func (r *queryResolver) Todos(ctx context.Context) ([]*model.Todo, error) {
-	panic(fmt.Errorf("not implemented: Todos - todos"))
-}
-*/
