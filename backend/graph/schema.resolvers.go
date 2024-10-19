@@ -40,14 +40,24 @@ func uploadToMinio(ctx context.Context, minioClient *minio.Client, file graphql.
 }
 
 func (r *mutationResolver) UploadFile(ctx context.Context, file graphql.Upload) (bool, error) {
+	userID := ctx.Value("userID").(int)
 
-	err := uploadToMinio(ctx, r.Resolver.MinioClient, file)
+	user, err := r.Client.User.FindUnique(
+		prisma.User.ID.Equals(userID),
+	).Exec(ctx)
 	if err != nil {
-		log.Printf("Error uploading file: %v", err)
-		return false, err
+		return false, fmt.Errorf("user not found")
 	}
+	if user.ID == userID {
+		err := uploadToMinio(ctx, r.Resolver.MinioClient, file)
+		if err != nil {
+			log.Printf("Error uploading file: %v", err)
+			return false, err
+		}
 
-	return true, nil
+		return true, nil
+	}
+	return false, nil
 }
 
 func (r *mutationResolver) Signup(ctx context.Context, email string, password string) (string, error) {

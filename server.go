@@ -57,7 +57,6 @@ func main() {
 	// Create HTTP server with JWT middleware
 	http.Handle("/", playground.Handler("GraphQL playground", "/query"))
 	http.Handle("/query", jwt.AuthMiddleware(srv))
-
 	log.Printf("connect to http://localhost:8080/ for GraphQL playground")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
