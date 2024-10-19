@@ -89,7 +89,7 @@ model User {
   createdAt DateTime @default(now())
 }
 `
-const schemaDatasourceURL = "file:dev.db"
+const schemaDatasourceURL = "file:prisma/dev.db"
 const schemaEnvVarName = ""
 
 // hasBinaryTargets is true when binaryTargets are provided on generation time
